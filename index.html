@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <script src="/js/togeojson.js"></script>
+    <script src="/js/togpx.js"></script>
+    <!-- <script type="module"  src="/js/tokml.js"></script> -->
+    <script src="/js/XmlBeautify.js"></script>
+    
+
+    <!-- <script src="https://unpkg.com/togeojson@0.15.0/togeojson.js"></script> -->
+    
+    <title>kml Splitter</title>
+</head>
+<body>
+    <div class="container">
+        <div class="upload">
+            <label for="myfile">Upload</label>
+            <input type="file" name="myfile" id="myfile">
+        </div>
+        <div class="content">
+            <textarea name="txt" id="txt" cols="30" rows="10"></textarea>
+            
+        </div>
+        <div class="download">
+            <input id="download" type="button" value="Download" onclick="downloadKmlFiles()">
+        </div>
+    </div>
+</body>
+
+<script >
+
+    document.getElementById('myfile').addEventListener('change', handleFile);
+    var geojson = ""
+    function handleFile(event) {
+      const file = event.target.files[0];
+
+      if (!file) {
+        console.error('No file selected.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const text = e.target.result;
+         geojson = textToGeoJSON(text);
+
+      
+        
+
+       
+
+        // You can also display the GeoJSON on the page or use it as needed
+
+        document.getElementById('txt').innerHTML = new XmlBeautify().beautify(text, 
+    {
+        indent: "  ",  //indent pattern like white spaces
+        useSelfClosingElement: true //true:use self-closing element when empty element.
+    });
+    
+
+    document.getElementById("download").value = "Download (" +   geojson.features.length + ")"
+      };
+      reader.readAsText(file);
+    }
+
+
+//download the kml files
+function downloadKmlFiles(){
+
+  geojson.features.forEach(element => {
+       
+                //convert to kml
+            const kml = featureToKML(element);
+            
+            const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+      const url = window.URL.createObjectURL(blob);
+
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = element.properties.name + '.kml';
+      downloadLink.click()
+        });
+     
+        }
+        
+
+
+    function textToGeoJSON(text) {
+      // Use the toGeoJSON library to convert text to GeoJSON
+      const geojson = toGeoJSON.kml(new DOMParser().parseFromString(text, 'text/xml'));
+      return geojson;
+    }
+
+
+    function featureToKML(feature) {
+      // Convert a single GeoJSON feature to KML
+     // const kml = togpx({ type: 'FeatureCollection', features: [feature] });
+
+console.log(feature.properties.name)
+    //  const geojson = JSON.parse(feature);
+      const kml = togpx(geojson);
+
+      return kml;
+     
+
+    //  const kml = tokml(feature);
+    //  console.log(kml)
+    //   return kml;
+    }
+  </script>
+</html>
