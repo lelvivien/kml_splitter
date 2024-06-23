@@ -4,17 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <script src="/js/togeojson.js"></script>
-    <script src="/js/togpx.js"></script>
-    <!-- <script type="module"  src="/js/tokml.js"></script> -->
-    <script src="/js/XmlBeautify.js"></script>
+    <script src="./js/togeojson.js"></script>
+    <script src="./js/togpx.js"></script>
+    <script type="module"  src="./js/tokml.js"></script>
+    <script src="./js/XmlBeautify.js"></script>
     <script type='text/javascript' src='http://www.bing.com/api/maps/mapcontrol?callback=GetMap&key=Ap9MQf8SmemILwnUNnzDa5x0Q23AgQdAkoTTWRBMJ2oGIc2zDT7-kXvfOacM0YfX' async defer></script>
-    <script type='text/javascript'>
-    
-    
-      </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+		<!-- highlight-within-textarea CSS/JS -->
+		<link href="js/highlight-within-textarea-master/jquery.highlight-within-textarea.css" rel="stylesheet">
+		<script src="js/highlight-within-textarea-master/jquery.highlight-within-textarea.js"></script>
+    <script src="./js/alertify/alertify.min.js"></script>
+    <link rel="stylesheet" href="./js/alertify/css/alertify.min.css">
     <!-- <script src="https://unpkg.com/togeojson@0.15.0/togeojson.js"></script> -->
-    
     <title>kml Splitter</title>
 </head>
 <body>
@@ -22,10 +23,10 @@
       <div class="kml">
         <div class="upload">
           <label for="myfile">Upload</label>
-          <input type="file" name="myfile" id="myfile">
+          <input type="file" name="myfile" id="myfile" accept="kml" >
       </div>
       <div class="content">
-          <textarea name="txt" id="txt" cols="30" rows="10"></textarea>
+          <textarea class="highlight" name="txt" id="txt" cols="30" rows="300"></textarea>
       </div>
       <div class="download">
           <input id="download" type="button" value="Download" onclick="downloadKmlFiles()">
@@ -44,12 +45,13 @@ var map = {}
     var geojson = ""
     var feature =[]
     function handleFile(event) {
-      const file = event.target.files[0];
 
-      if (!file) {
-        console.error('No file selected.');
-        return;
-      }
+      const file = event.target.files[0];
+      console.log(file)
+     if(validateFile(file) == false){
+      event.target.value = ''
+      return
+     }      
       const reader = new FileReader();
       reader.onload = function (e) {
         const text = e.target.result;
@@ -70,7 +72,6 @@ var map = {}
       };
       reader.readAsText(file);
       //-------onload end -----------------------------------------
-
     }
 
     function GetMap(poly)
@@ -78,7 +79,7 @@ var map = {}
         if(!poly){
           poly = []
         }
-   
+
            map = new Microsoft.Maps.Map('#myMap',
            {
     credentials: 'Ap9MQf8SmemILwnUNnzDa5x0Q23AgQdAkoTTWRBMJ2oGIc2zDT7-kXvfOacM0YfX',
@@ -86,13 +87,10 @@ var map = {}
     mapTypeId: Microsoft.Maps.MapTypeId.aerial,
     zoom: 15
           })
-     
-
         //Load the GeoJson Module.
         Microsoft.Maps.loadModule('Microsoft.Maps.GeoJson', function () {
 
             //Parse the GeoJson object into a Bing Maps shape.
-
             var shape = Microsoft.Maps.GeoJson.read(geojson, {
                 polygonOptions: {
                     fillColor: 'rgba(255,0,0,0.5)',
@@ -101,26 +99,35 @@ var map = {}
                     cursor:'pointer'
                 }
             });
-
-
                //Add the shape to the map.
             shape.forEach( function(element) {
-  
-addPolygonWithLabel(element)
+                addPolygonWithLabel(element)
             } )
 
-            Microsoft.Maps.Events.addHandler(shape, 'mouseover', function () { alert('mouse hover') });            
+            // Microsoft.Maps.Events.addHandler(shape, 'mouseover', function () { alert('mouse hover') });            
         });
-        }
-    
-//download the kml files
-function downloadKmlFiles(){
 
-  geojson.features.forEach(element => {
-       
+        Microsoft.Maps.loadModule('Microsoft.Maps.SpatialMath')
+        }
+
+function downloadKmlFiles(){
+ if(validateFile(geojson) == false){
+  return
+ }   
+ geojson.features.forEach(element => {
+
+    //delete the styleHash property fron the elementm since it will not work with tokml function
+    delete element.properties.styleHash
                 //convert to kml
-            const kml = featureToKML(element);
-            
+                //wrap the elemet in a geojsoncolletion before passing it to tokml
+                const geocollection = {
+  type: 'FeatureCollection',
+  features:[element]
+};
+          
+            const kml = tokml(geocollection);
+        
+  
             const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
       const url = window.URL.createObjectURL(blob);
       const downloadLink = document.createElement('a');
@@ -129,9 +136,7 @@ function downloadKmlFiles(){
       downloadLink.click()
         });
      
-        }
-        
-
+  }
 
     function textToGeoJSON(text) {
       // Use the toGeoJSON library to convert text to GeoJSON
@@ -139,46 +144,91 @@ function downloadKmlFiles(){
       return geojson;
     }
 
+    // function featureToKML(feature) {
+    //   // Convert a single GeoJSON feature to KML
+    // //  const geojson = JSON.parse(feature);
+    //   // const kml = togpx(geojson);
 
-    function featureToKML(feature) {
-      // Convert a single GeoJSON feature to KML
-     // const kml = togpx({ type: 'FeatureCollection', features: [feature] });
-
-console.log(feature.properties.name)
-    //  const geojson = JSON.parse(feature);
-      const kml = togpx(geojson);
-
-      return kml;
+    //   // return kml;
      
 
     //  const kml = tokml(feature);
-    //  console.log(kml)
-    //   return kml;
-    }
+    //    return kml;
+    // }
  
- 
+function CalculateArea(shape){
+  var area = 0
+  var perimeter = 0
+  var area = 0
+   area = Microsoft.Maps.SpatialMath.Geometry.area(shape, Microsoft.Maps.SpatialMath.AreaUnits.SquareKilometers);
+   perimeter = Microsoft.Maps.SpatialMath.Geometry.calculateLength(shape, Microsoft.Maps.SpatialMath.DistanceUnits.Meters);
+            area = Math.round(area * 100) / 100;
+            perimeter = Math.round(perimeter * 100) / 100;
+ return {area:area,perimeter:perimeter}
+
+
+}
     function addPolygonWithLabel(polygon) {
-        //Add the polygon to the map.
-        map.entities.push(polygon);
-
-   
-
+           
         //Calculate the centroid of the polygon.
-        // var centroid = Microsoft.Maps.SpatialMath.Geometry.centroid(polygon);
         var centroid = polygon.geometry.boundingBox.center
+
+        //calculate area and distances
+     var measures =     CalculateArea(polygon)
+    //  console.log(measures)
+      
         //Create a pushpin that has a transparent icon and a title property set to the label value.
         var labelPin = new Microsoft.Maps.Pushpin(centroid, {
-            icon: '<svg xmlns="https://www.w3.org/2000/svg" width="1" height="1"></svg>',
-            title: polygon.metadata.name
+          icon: '<svg xmlns="https://www.w3.org/2000/svg" width="0.5" height="0.5"></svg>',
+            title: polygon.metadata.name,
+            subTitle:  measures.area.toString() + " km2",            
         });
 
         //Store a reference to the label pushpin in the polygon metadata.
-        polygon.metadata = { label: labelPin };    
+        polygon.metadata = { label: labelPin, measures:measures };  
+        console.log('polygones data',polygon.metadata.measures)
+        
+        //polygone click event and hover effects
+        Microsoft.Maps.Events.addHandler(polygon, 'click', function (e) {scrollToWord(labelPin.entity.title) });
+        Microsoft.Maps.Events.addHandler(polygon, 'mouseover', function (e) {
+          e.target.setOptions({ fillColor: 'rgba(200,200,2000,0.5)' });
+        });
+        Microsoft.Maps.Events.addHandler(polygon, 'mouseout', function (e) {
+            e.target.setOptions({ fillColor: 'rgba(255,0,0,0.5)' });
+        });
 
+   
         //Add the label pushpin to the map.
+        map.entities.push(polygon);
         map.entities.push(labelPin);
     }
 
+  function scrollToWord(word) {
+  var textarea = document.getElementById('txt');
+  var text = textarea.value;
+  var innerHTML = textarea.innerHTML
+  var index = text.indexOf(word);
 
+
+  if (index !== -1) {
+    // Calculate the number of lines before the word
+    var linesBeforeWord = text.substr(0, index).split('\n').length - 1;
+    // Calculate the height of each line (you might need to adjust this based on your styling)
+    
+    
+    var lineHeight = textarea.scrollHeight / textarea.rows;
+
+    // Scroll to the position
+    textarea.scrollTop = (linesBeforeWord * lineHeight);
+  }
+}
+function validateFile(file){
+  if (!file || file.name.split('.').pop().toLowerCase() !== 'kml' ) {
+    alertify.set('notifier','delay', 2); 
+        alertify.error('File Format Error');
+        
+        return false;
+      }
+}
  </script>
 </html>
