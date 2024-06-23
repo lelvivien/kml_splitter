@@ -23,7 +23,7 @@
       <div class="kml">
         <div class="upload">
           <label for="myfile">Upload</label>
-          <input type="file" name="myfile" id="myfile" accept="kml" >
+          <input type="file" name="myfile" id="myfile" accept=".kml" >
       </div>
       <div class="content">
           <textarea class="highlight" name="txt" id="txt" cols="30" rows="300"></textarea>
@@ -60,7 +60,6 @@ var map = {}
         feature.forEach(element => element.pop())
       
         // You can also display the GeoJSON on the page or use it as needed
-
         document.getElementById('txt').innerHTML = new XmlBeautify().beautify(text, 
     {
         indent: "  ",  //indent pattern like white spaces
@@ -68,6 +67,7 @@ var map = {}
     });
     
     document.getElementById("download").value = "Download (" +   geojson.features.length + ")"
+    console.log('get map feature',feature)
     GetMap(feature)
       };
       reader.readAsText(file);
@@ -79,13 +79,24 @@ var map = {}
         if(!poly){
           poly = []
         }
+console.log('poly',poly)
 
+        if(poly.length==0){
+          //center the map in beni mellal on the first load
+          x = 32.28119505924205
+          y = -6.456126853142409
+        }else{
+          //move the map to one of the polygon point
+          x=poly[0][1]
+          y=poly[0][0]
+        }
+       // 32.28119505924205, -6.456126853142409
            map = new Microsoft.Maps.Map('#myMap',
            {
     credentials: 'Ap9MQf8SmemILwnUNnzDa5x0Q23AgQdAkoTTWRBMJ2oGIc2zDT7-kXvfOacM0YfX',
-    center: new Microsoft.Maps.Location(32.28119505924205, -6.456126853142409),
+    center: new Microsoft.Maps.Location(x, y),
     mapTypeId: Microsoft.Maps.MapTypeId.aerial,
-    zoom: 15
+    zoom: 14
           })
         //Load the GeoJson Module.
         Microsoft.Maps.loadModule('Microsoft.Maps.GeoJson', function () {
@@ -102,11 +113,8 @@ var map = {}
                //Add the shape to the map.
             shape.forEach( function(element) {
                 addPolygonWithLabel(element)
-            } )
-
-            // Microsoft.Maps.Events.addHandler(shape, 'mouseover', function () { alert('mouse hover') });            
+            } )         
         });
-
         Microsoft.Maps.loadModule('Microsoft.Maps.SpatialMath')
         }
 
@@ -124,11 +132,10 @@ function downloadKmlFiles(){
   type: 'FeatureCollection',
   features:[element]
 };
-          
-            const kml = tokml(geocollection);
-        
-  
-            const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+      console.log('geo location',geocollection)
+      const kml = tokml(geocollection);
+      
+      const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
       const url = window.URL.createObjectURL(blob);
       const downloadLink = document.createElement('a');
       downloadLink.href = url;
@@ -142,19 +149,7 @@ function downloadKmlFiles(){
       // Use the toGeoJSON library to convert text to GeoJSON
       const geojson = toGeoJSON.kml(new DOMParser().parseFromString(text, 'text/xml'));
       return geojson;
-    }
-
-    // function featureToKML(feature) {
-    //   // Convert a single GeoJSON feature to KML
-    // //  const geojson = JSON.parse(feature);
-    //   // const kml = togpx(geojson);
-
-    //   // return kml;
-     
-
-    //  const kml = tokml(feature);
-    //    return kml;
-    // }
+    }    
  
 function CalculateArea(shape){
   var area = 0
@@ -230,5 +225,7 @@ function validateFile(file){
         return false;
       }
 }
- </script>
+
+
+</script>
 </html>
